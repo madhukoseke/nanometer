@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ensureApiBaseUrl } from "@/lib/ensureApiBaseUrl";
 import type { NanometerEvent } from "./types";
 
-const SELLER_URL = process.env.NEXT_PUBLIC_SELLER_URL ?? "http://localhost:3001";
+const SELLER_URL = ensureApiBaseUrl(process.env.NEXT_PUBLIC_SELLER_URL ?? "http://localhost:3001");
 
 /**
  * Subscribes to the seller's SSE feed and pushes events into a ring buffer

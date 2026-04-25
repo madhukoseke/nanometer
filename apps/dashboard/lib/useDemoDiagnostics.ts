@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ensureApiBaseUrl } from "@/lib/ensureApiBaseUrl";
 
-const SELLER = process.env.NEXT_PUBLIC_SELLER_URL ?? "http://localhost:3001";
-const SWARM = process.env.NEXT_PUBLIC_SWARM_URL ?? "http://localhost:3002";
+const SELLER = ensureApiBaseUrl(process.env.NEXT_PUBLIC_SELLER_URL ?? "http://localhost:3001");
+const SWARM = ensureApiBaseUrl(process.env.NEXT_PUBLIC_SWARM_URL ?? "http://localhost:3002");
 
 export type SwarmStatus = {
   running: boolean;

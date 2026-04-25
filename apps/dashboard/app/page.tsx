@@ -9,8 +9,9 @@ import { MarginTab } from "@/components/MarginTab";
 import { CohortsTab } from "@/components/CohortsTab";
 import { SettlementTab } from "@/components/SettlementTab";
 import { DemoDiagnosticsBar } from "@/components/DemoDiagnosticsBar";
+import { ensureApiBaseUrl } from "@/lib/ensureApiBaseUrl";
 
-const SWARM_URL = process.env.NEXT_PUBLIC_SWARM_URL ?? "http://localhost:3002";
+const SWARM_URL = ensureApiBaseUrl(process.env.NEXT_PUBLIC_SWARM_URL ?? "http://localhost:3002");
 type Tab = "live" | "margin" | "cohorts" | "settle";
 
 export default function Page() {

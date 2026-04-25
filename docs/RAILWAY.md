@@ -141,6 +141,7 @@ The **dashboard** is for Vercel. These steps deploy the **Express** apps from th
 | Seller crashes on start | Check Variables; missing `SELLER_ADDRESS` or Supabase. Read **Deploy logs**. |
 | Swarm: port / connection refused | Swarm now uses `PORT` from Railway; redeploy after latest code. |
 | CORS in browser to seller | Server uses `cors({ origin: true })` — if problems persist, set explicit origin to your Vercel URL. |
+| Swarm **paid** increases but dashboard **events** stay 0, and `NEXT_PUBLIC_SELLER_URL` already matches `SELLER_URL` | Restart `next dev` / redeploy Vercel so `NEXT_PUBLIC_*` is picked up. Set the **seller** service to **1 replica** (Scale): the live SSE bus is in-memory; if Railway runs 2+ instances, paid calls can hit instance A while `/events` stays on instance B. |
 
 ---
 

@@ -1,0 +1,21 @@
+{
+  "name": "nanometer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Margin intelligence for the agentic economy",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@nanometer/seller-api",
+    "dev:dashboard": "npm run dev --workspace=@nanometer/dashboard",
+    "dev:swarm": "npm run dev --workspace=@nanometer/swarm",
+    "build:libs": "npm run build -w nanometer && npm run build -w @nanometer/seller-api",
+    "build": "npm run build:libs && npm run build -w @nanometer/dashboard"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

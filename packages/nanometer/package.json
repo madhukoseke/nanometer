@@ -1,0 +1,22 @@
+{
+  "name": "nanometer",
+  "version": "0.1.0",
+  "description": "Margin intelligence middleware for Circle Nanopayments",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "peerDependencies": {
+    "express": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT"
+}

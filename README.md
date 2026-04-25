@@ -53,6 +53,8 @@ docs/
 
 If a tool or CI step aborts at ~30s, raise the timeout: the dashboard step needs most of the wall time, not a hang.
 
+**Cloud:** dashboard on Vercel and seller/swarm on Railway — set `NEXT_PUBLIC_SELLER_URL` and the swarm’s `SELLER_URL` to the **same** public `https://` seller base URL (not `localhost`). See `docs/RAILWAY.md`.
+
 ## Quick start (local)
 
 ```bash

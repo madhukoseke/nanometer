@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "bootstrap": "tsx src/bootstrap.ts",
     "deposit": "tsx src/depositToGateway.ts",

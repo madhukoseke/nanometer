@@ -104,19 +104,29 @@ The **dashboard** is for Vercel. These steps deploy the **Express** apps from th
 
 2. **Root directory:** **repository root** (same as seller).
 
-3. **Build command** (install only; no separate build needed for `tsx`):
+### Option A — Docker (matches seller; recommended)
+
+1. **Settings** → **Build** → **Builder:** **Dockerfile**.
+2. **Dockerfile path:** `Dockerfile.swarm` (repo root).
+3. **Start** is the image `CMD` (no override needed). **Do not** set `SWARM_PORT` on Railway; **`PORT` is set automatically**.
+
+### Option B — Railpack / Nixpacks (no Docker)
+
+1. **Build command:**
 
    ```bash
-   npm install
+   npm install && npm run build -w @nanometer/swarm
    ```
 
-4. **Start command:**
+2. **Start command:**
 
    ```bash
-   npx tsx apps/swarm/src/server.ts
+   node apps/swarm/dist/server.js
    ```
 
-5. **Environment variables:**
+   (Older docs used `npx tsx apps/swarm/src/server.ts` without a build; the workspace now compiles to `dist` — prefer the `node` line above.)
+
+3. **Environment variables (both options):**
 
    | Name | Value |
    |------|--------|
@@ -127,9 +137,9 @@ The **dashboard** is for Vercel. These steps deploy the **Express** apps from th
 
    **Do not set** `SWARM_PORT` on Railway; **`PORT` is set automatically** and the app listens on it.
 
-6. **Generate domain** for this service and open `https://YOUR-SWARM-URL/status` — expect JSON with `running`, `agents`, etc.
+4. **Generate domain** for this service and open `https://YOUR-SWARM-URL/status` — expect JSON with `running`, `agents`, etc.
 
-7. Put this base URL in Vercel as `NEXT_PUBLIC_SWARM_URL`, redeploy the dashboard.
+5. Put that base URL in the dashboard (and Vercel) as `NEXT_PUBLIC_SWARM_URL` (e.g. in `apps/dashboard/.env.local`), then restart `next dev` or redeploy.
 
 ---
 

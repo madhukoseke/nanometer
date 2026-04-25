@@ -17,6 +17,7 @@ export default function Page() {
   const { events, connected } = useNanoStream(2000);
   const diag = useDemoDiagnostics(1500);
   const [tab, setTab] = useState<Tab>("live");
+  const [swarmActionError, setSwarmActionError] = useState<string | null>(null);
   /** True while pay loop runs or USDC is still moving into Gateway. */
   const swarmRunning = Boolean(diag.swarm?.running);
   const swarmStarting = Boolean(diag.swarm?.starting);
@@ -39,13 +40,24 @@ export default function Page() {
 
   async function toggleSwarm() {
     if (swarmStarting) return;
+    setSwarmActionError(null);
     const path = swarmRunning ? "/stop" : "/start";
     try {
       const r = await fetch(`${SWARM_URL}${path}`, { method: "POST" });
-      if (!r.ok) console.error("swarm", path, r.status, await r.text());
+      const text = await r.text();
+      if (!r.ok) {
+        setSwarmActionError(
+          `Swarm ${path} → HTTP ${r.status}${text ? `: ${text.slice(0, 200)}` : ""}`
+        );
+        return;
+      }
     } catch {
-      // eslint-disable-next-line no-console
-      console.error("swarm controller not reachable at", SWARM_URL);
+      setSwarmActionError(
+        `Could not reach the swarm at ${SWARM_URL}. ` +
+          (SWARM_URL.includes("localhost") || SWARM_URL.includes("127.0.0.1")
+            ? "Run the swarm locally (npm run dev:swarm) or set NEXT_PUBLIC_SWARM_URL to your deployed swarm (https://…) in .env.local and restart next dev."
+            : "Check the swarm service is up and CORS allows this site.")
+      );
     }
   }
 
@@ -58,6 +70,11 @@ export default function Page() {
           swarmStarting={swarmStarting}
           onSwarmToggle={toggleSwarm}
         />
+        {swarmActionError && (
+          <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 font-mono text-xs text-danger">
+            {swarmActionError}
+          </div>
+        )}
         <DemoDiagnosticsBar
           sellerUrl={diag.sellerUrl}
           swarmUrl={diag.swarmUrl}

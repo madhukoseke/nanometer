@@ -12,42 +12,35 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
-import type { Hex } from "viem";
+import type { GatewayClient } from "@circle-fin/x402-batching/client";
+import { getSwarmClients, hasAgentKeys, CHAIN } from "./agents.js";
+import { ensureGatewayDeposits } from "./ensureGatewayDeposit.js";
 
 const SWARM_PORT = Number(process.env.SWARM_PORT ?? 3002);
 const SELLER_URL = process.env.SELLER_URL ?? "http://localhost:3001";
-const CHAIN = (process.env.CHAIN ?? "arcTestnet") as SupportedChainName;
 const RUN_DURATION_SEC = Number(process.env.RUN_DURATION_SEC ?? 90);
 const TARGET_RPS = Number(process.env.TARGET_RPS ?? 12);
 
-const AGENT_KEYS = (process.env.AGENT_KEYS ?? "")
-  .split(",").map(s => s.trim()).filter(Boolean) as Hex[];
-
-if (AGENT_KEYS.length === 0) {
+if (!hasAgentKeys()) {
+  // eslint-disable-next-line no-console
   console.error("[swarm] AGENT_KEYS is empty. Run `npm run bootstrap` first, then fund the wallets.");
   process.exit(1);
+}
+
+const clients: { id: string; client: GatewayClient }[] = getSwarmClients();
+for (const c of clients) {
+  // eslint-disable-next-line no-console
+  console.log(`[swarm] ${c.id} -> ${c.client.address}`);
 }
 
 const ENDPOINTS = ["/v1/infer", "/v1/search", "/v1/embed"];
 
 // ---------------------------------------------------------------------------
-// Build one GatewayClient per agent. Each agent gets its own funded wallet.
-// ---------------------------------------------------------------------------
-function makeClient(opts: { chain: SupportedChainName; privateKey: Hex }) {
-  return new GatewayClient({ chain: opts.chain, privateKey: opts.privateKey });
-}
-
-const clients = AGENT_KEYS.map((pk, i) => {
-  const client = makeClient({ chain: CHAIN, privateKey: pk });
-  console.log(`[swarm] agent_${String(i + 1).padStart(2, "0")} -> ${client.address}`);
-  return { id: `agent_${String(i + 1).padStart(2, "0")}`, client };
-});
-
-// ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 let activeRun: { stop: () => void } | null = null;
+/** True while on-chain USDC → Gateway deposits run before the pay loop. */
+let starting = false;
 let stats = { calls: 0, errors: 0, startedAt: 0 };
 
 // ---------------------------------------------------------------------------
@@ -78,9 +71,10 @@ function startSwarm(): { stop: () => void } {
     for (const f of stopFlags) f.stop = true;
     activeRun = null;
     const elapsed = (Date.now() - stats.startedAt) / 1000;
+    // eslint-disable-next-line no-console
     console.log(
       `[swarm] stopped. ${stats.calls} calls in ${elapsed.toFixed(1)}s ` +
-      `(${(stats.calls / elapsed).toFixed(1)} rps), ${stats.errors} errors`
+        `(${(stats.calls / elapsed).toFixed(1)} rps), ${stats.errors} errors`
     );
   }
 
@@ -105,13 +99,13 @@ async function runAgent(
       });
       stats.calls++;
       if (stats.calls % 25 === 0) {
+        // eslint-disable-next-line no-console
         console.log(`[swarm] +${stats.calls} calls, latest tx=${result.transaction?.slice(0, 10)}…`);
       }
     } catch (err) {
       stats.errors++;
       const msg = err instanceof Error ? err.message : String(err);
-      // Insufficient_balance fires when an agent's Gateway balance drains.
-      // We log and keep the other agents going — the demo doesn't need every agent surviving.
+      // eslint-disable-next-line no-console
       console.warn(`[swarm] ${agent.id} error: ${msg.slice(0, 100)}`);
       if (msg.includes("Insufficient")) flag.stop = true;
     }
@@ -124,15 +118,23 @@ async function runAgent(
 
 function makeBody(endpoint: string): unknown {
   switch (endpoint) {
-    case "/v1/infer":  return { prompt: pick(["hello", "summarize this", "what is gas"]) };
-    case "/v1/search": return { q: pick(["arc network", "circle nanopayments", "x402"]) };
-    case "/v1/embed":  return { text: pick(["agentic commerce", "sub-cent payments"]) };
-    default: return {};
+    case "/v1/infer":
+      return { prompt: pick(["hello", "summarize this", "what is gas"]) };
+    case "/v1/search":
+      return { q: pick(["arc network", "circle nanopayments", "x402"]) };
+    case "/v1/embed":
+      return { text: pick(["agentic commerce", "sub-cent payments"]) };
+    default:
+      return {};
   }
 }
 
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
-function sleep(ms: number): Promise<void> { return new Promise(r => setTimeout(r, ms)); }
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+function sleep(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms));
+}
 
 // ---------------------------------------------------------------------------
 // Control plane
@@ -146,6 +148,7 @@ app.get("/healthz", (_req, res) => res.json({ ok: true, agents: clients.length }
 app.get("/status", (_req, res) => {
   res.json({
     running: activeRun !== null,
+    starting,
     agents: clients.length,
     target_rps: TARGET_RPS,
     duration_sec: RUN_DURATION_SEC,
@@ -159,19 +162,46 @@ app.post("/start", (_req, res) => {
   if (activeRun) {
     return res.status(409).json({ error: "already running" });
   }
-  activeRun = startSwarm();
-  console.log(`[swarm] started — ${clients.length} agents, ${TARGET_RPS} rps target, ${RUN_DURATION_SEC}s`);
-  res.json({ started: true, agents: clients.length });
+  if (starting) {
+    return res.status(409).json({ error: "starting — wait for USDC → Gateway deposit step in logs" });
+  }
+  starting = true;
+
+  // Respond immediately; deposits can take 30s+ per agent on testnet.
+  res.json({ started: true, agents: clients.length, message: "Deposits run first; watch the swarm terminal." });
+
+  void (async () => {
+    // eslint-disable-next-line no-console
+    console.log("[swarm] checking Circle Gateway balance (faucet only fills the wallet)…");
+    try {
+      await ensureGatewayDeposits(clients);
+      activeRun = startSwarm();
+      // eslint-disable-next-line no-console
+      console.log(`[swarm] pay loop — ${clients.length} agents, ${TARGET_RPS} rps target, ${RUN_DURATION_SEC}s`);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[swarm] start failed after deposit step:", e);
+    } finally {
+      starting = false;
+    }
+  })();
 });
 
 app.post("/stop", (_req, res) => {
-  if (!activeRun) return res.status(409).json({ error: "not running" });
+  if (!activeRun) {
+    return res.status(409).json({ error: "not running" });
+  }
   activeRun.stop();
   res.json({ stopped: true });
 });
 
 app.listen(SWARM_PORT, () => {
+  // eslint-disable-next-line no-console
   console.log(`[swarm] control plane on :${SWARM_PORT}`);
+  // eslint-disable-next-line no-console
   console.log(`[swarm] -> seller at ${SELLER_URL}`);
+  // eslint-disable-next-line no-console
   console.log(`[swarm] -> chain ${CHAIN}`);
+  // eslint-disable-next-line no-console
+  console.log(`[swarm] tip: run "npm run deposit" once after faucet, or use Start and watch logs.`);
 });

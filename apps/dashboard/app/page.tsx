@@ -2,19 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useNanoStream } from "@/lib/useNanoStream";
+import { useDemoDiagnostics } from "@/lib/useDemoDiagnostics";
 import { COUNTERFACTUAL_GAS } from "@/lib/types";
 import { LiveTab } from "@/components/LiveTab";
 import { MarginTab } from "@/components/MarginTab";
 import { CohortsTab } from "@/components/CohortsTab";
 import { SettlementTab } from "@/components/SettlementTab";
+import { DemoDiagnosticsBar } from "@/components/DemoDiagnosticsBar";
 
 const SWARM_URL = process.env.NEXT_PUBLIC_SWARM_URL ?? "http://localhost:3002";
 type Tab = "live" | "margin" | "cohorts" | "settle";
 
 export default function Page() {
   const { events, connected } = useNanoStream(2000);
+  const diag = useDemoDiagnostics(1500);
   const [tab, setTab] = useState<Tab>("live");
-  const [swarmRunning, setSwarmRunning] = useState(false);
+  /** True while pay loop runs or USDC is still moving into Gateway. */
+  const swarmRunning = Boolean(diag.swarm?.running);
+  const swarmStarting = Boolean(diag.swarm?.starting);
 
   const totals = useMemo(() => {
     const totalCalls = events.length;
@@ -33,12 +38,12 @@ export default function Page() {
   }, [events]);
 
   async function toggleSwarm() {
+    if (swarmStarting) return;
     const path = swarmRunning ? "/stop" : "/start";
     try {
       const r = await fetch(`${SWARM_URL}${path}`, { method: "POST" });
-      if (r.ok) setSwarmRunning(!swarmRunning);
+      if (!r.ok) console.error("swarm", path, r.status, await r.text());
     } catch {
-      // swarm not reachable — keep button enabled, surface error in console
       // eslint-disable-next-line no-console
       console.error("swarm controller not reachable at", SWARM_URL);
     }
@@ -50,7 +55,17 @@ export default function Page() {
         <Header
           connected={connected}
           swarmRunning={swarmRunning}
+          swarmStarting={swarmStarting}
           onSwarmToggle={toggleSwarm}
+        />
+        <DemoDiagnosticsBar
+          sellerUrl={diag.sellerUrl}
+          swarmUrl={diag.swarmUrl}
+          sellerOk={diag.sellerOk}
+          swarm={diag.swarm}
+          swarmFetchError={diag.swarmFetchError}
+          eventCount={events.length}
+          sseConnected={connected}
         />
         <Tabs current={tab} onChange={setTab} />
 
@@ -64,8 +79,14 @@ export default function Page() {
 }
 
 function Header({
-  connected, swarmRunning, onSwarmToggle
-}: { connected: boolean; swarmRunning: boolean; onSwarmToggle: () => void }) {
+  connected, swarmRunning, swarmStarting, onSwarmToggle
+}: {
+  connected: boolean;
+  swarmRunning: boolean;
+  swarmStarting: boolean;
+  onSwarmToggle: () => void;
+}) {
+  const btn = swarmRunning ? "stop" : swarmStarting ? "funding gateway…" : "start agent swarm";
   return (
     <header className="mb-6 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -82,9 +103,10 @@ function Header({
         />
         <button
           onClick={onSwarmToggle}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-xs hover:bg-border"
+          disabled={swarmStarting}
+          className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-xs hover:bg-border disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {swarmRunning ? "stop" : "start agent swarm"}
+          {btn}
         </button>
       </div>
     </header>

@@ -11,6 +11,7 @@
     "dev:api": "npm run dev --workspace=@nanometer/seller-api",
     "dev:dashboard": "npm run dev --workspace=@nanometer/dashboard",
     "dev:swarm": "npm run dev --workspace=@nanometer/swarm",
+    "deposit": "npm run deposit --workspace=@nanometer/swarm",
     "build:libs": "npm run build -w nanometer && npm run build -w @nanometer/seller-api",
     "build": "npm run build:libs && npm run build -w @nanometer/dashboard"
   },

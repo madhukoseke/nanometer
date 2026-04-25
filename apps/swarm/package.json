@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "bootstrap": "tsx src/bootstrap.ts",
+    "deposit": "tsx src/depositToGateway.ts",
     "start": "tsx src/server.ts"
   },
   "dependencies": {

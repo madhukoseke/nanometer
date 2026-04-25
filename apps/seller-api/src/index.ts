@@ -10,7 +10,8 @@ const SELLER_ADDRESS = requireEnv("SELLER_ADDRESS");
 const NETWORKS = (process.env.NETWORKS ?? "eip155:5042002").split(",");
 
 const app = express();
-app.use(cors());
+// Reflect any Origin (needed for EventSource to :3000 from the Next app on a different port).
+app.use(cors({ origin: true }));
 app.use(express.json());
 
 // ---------------------------------------------------------------------------

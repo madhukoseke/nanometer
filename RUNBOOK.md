@@ -46,9 +46,18 @@ npm run bootstrap
 # Paste the AGENT_KEYS line from the bootstrap output into apps/swarm/.env
 ```
 
-The first time the swarm runs, each `GatewayClient` calls `.deposit()` to move
-USDC from wallet to Gateway. That's an onchain tx per agent — give the testnet
-~30s to confirm all 5. **Do this the night before, not at the venue.**
+Faucet only fills the **wallet**. x402 `pay()` spends **Circle Gateway** balance, so
+you must move USDC wallet → Gateway **before** the demo works:
+
+```bash
+cd apps/swarm
+npm run deposit   # or from repo root: npm run deposit
+```
+
+That is one on-chain deposit per agent (can take 30s+ each on testnet). You can
+also rely on **Start agent swarm** in the UI — the swarm will run the same step
+first and log `[swarm] moving … USDC from wallet → Gateway`. **Do this the night
+before, not at the venue.**
 
 ## 4. Env files
 

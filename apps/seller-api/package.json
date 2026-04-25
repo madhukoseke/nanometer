@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc -b .",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -15,7 +15,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "nanometer": "*"
+    "nanometer": "file:../../packages/nanometer"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
-import { nanometer, bus } from "nanometer";
+import { nanometer, bus, type NanometerEvent } from "nanometer";
 import { mountReplay } from "./replay.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -68,7 +68,7 @@ app.get("/events", (req, res) => {
   // Heartbeat every 15s — keeps the connection alive through proxies.
   const heartbeat = setInterval(() => res.write(`: ping\n\n`), 15_000);
 
-  const unsubscribe = bus.subscribe((event) => {
+  const unsubscribe = bus.subscribe((event: NanometerEvent) => {
     res.write(`data: ${JSON.stringify(event)}\n\n`);
   });
 
@@ -87,22 +87,24 @@ app.get("/events", (req, res) => {
 const PRICE = "$0.001";
 
 app.post("/v1/infer", circleMw.require(PRICE), nm, (req, res) => {
+  const body = (req.body ?? {}) as { prompt?: string };
   // Tiny artificial latency to make the dashboard's p95 column meaningful.
   const delay = 60 + Math.random() * 80;
   setTimeout(() => {
     res.json({
       model: "nm-demo-1",
-      output: `inference result for ${(req.body?.prompt ?? "default").slice(0, 32)}`,
+      output: `inference result for ${(body.prompt ?? "default").slice(0, 32)}`,
       tokens: 42
     });
   }, delay);
 });
 
 app.post("/v1/search", circleMw.require(PRICE), nm, (req, res) => {
+  const body = (req.body ?? {}) as { q?: string };
   const delay = 80 + Math.random() * 100;
   setTimeout(() => {
     res.json({
-      query: req.body?.q ?? "default",
+      query: body.q ?? "default",
       results: [
         { title: "result 1", url: "https://example.com/1" },
         { title: "result 2", url: "https://example.com/2" },

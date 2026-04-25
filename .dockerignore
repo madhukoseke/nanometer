@@ -1,0 +1,17 @@
+# Speed up Docker/Railway context
+node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+.npm-cache
+.turbo
+.git
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.*
+*.log
+.DS_Store
+coverage
+.cache

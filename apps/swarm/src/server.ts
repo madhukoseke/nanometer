@@ -16,7 +16,8 @@ import type { GatewayClient } from "@circle-fin/x402-batching/client";
 import { getSwarmClients, hasAgentKeys, CHAIN } from "./agents.js";
 import { ensureGatewayDeposits } from "./ensureGatewayDeposit.js";
 
-const SWARM_PORT = Number(process.env.SWARM_PORT ?? 3002);
+// Railway/Render set PORT; local dev may use SWARM_PORT (e.g. 3002).
+const SWARM_PORT = Number(process.env.PORT || process.env.SWARM_PORT || 3002);
 const SELLER_URL = process.env.SELLER_URL ?? "http://localhost:3001";
 const RUN_DURATION_SEC = Number(process.env.RUN_DURATION_SEC ?? 90);
 const TARGET_RPS = Number(process.env.TARGET_RPS ?? 12);

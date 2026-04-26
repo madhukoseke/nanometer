@@ -24,8 +24,10 @@ export function DemoDiagnosticsBar({
   const running = swarm?.running ?? false;
   const fundGateway = Boolean(swarm?.starting);
 
+  /** True URL mismatch: paying now but this tab still shows no events. (Idle + cumulative paid>0
+   *  and buffer 0 is normal — the ring only fills from SSE after load; past runs do not backfill.) */
   const mismatch =
-    sseConnected && calls > 0 && eventCount === 0;
+    sseConnected && running && calls > 0 && eventCount === 0;
 
   const sellerLooksLocal = sellerUrl.includes("localhost") || sellerUrl.includes("127.0.0.1");
 

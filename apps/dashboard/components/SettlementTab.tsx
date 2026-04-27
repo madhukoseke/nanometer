@@ -59,8 +59,8 @@ export function SettlementTab({ events }: { events: NanometerEvent[] }) {
       <div className="rounded-lg border border-border bg-surface p-4">
         <div className="mb-3 text-sm font-medium">Onchain settlement events</div>
         <div className="font-mono text-xs">
-          <div className="grid grid-cols-[110px_1fr_88px_72px] gap-2 border-b border-border pb-1.5 text-[11px] text-muted">
-            <span>time</span>
+          <div className="grid grid-cols-[120px_1fr_88px_72px] gap-2 border-b border-border pb-1.5 text-[11px] text-muted">
+            <span>time (PT)</span>
             <span>tx ref</span>
             <span className="text-right">batch size</span>
             <span className="text-right">value</span>
@@ -76,11 +76,13 @@ export function SettlementTab({ events }: { events: NanometerEvent[] }) {
             batches.slice(0, 10).map((b, i) => (
               <div
                 key={b.tx_ref}
-                className={`grid grid-cols-[110px_1fr_88px_72px] gap-2 py-2 items-center ${
+                className={`grid grid-cols-[120px_1fr_88px_72px] gap-2 py-2 items-center ${
                   i === Math.min(9, batches.length - 1) ? "" : "border-b border-dashed border-border"
                 }`}
               >
-                <span className="text-muted">{b.latestTs.slice(11, 19)}</span>
+                <span className="text-muted" title={formatPacificFull(b.latestTs)}>
+                  {formatPacificTime(b.latestTs)}
+                </span>
                 <TxRefCell txRef={b.tx_ref} />
                 <span className="text-right">{b.batchSize}</span>
                 <span className="text-right">${b.value.toFixed(4)}</span>
@@ -122,6 +124,31 @@ function TxRefCell({ txRef }: { txRef: string }) {
       {shortTx(txRef)}
     </span>
   );
+}
+
+/** US Pacific; uses IANA so DST (PDT) vs standard (PST) is automatic. */
+const TIME_ZONE_AMERICA_LOS_ANGELES = "America/Los_Angeles";
+
+function formatPacificTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE_AMERICA_LOS_ANGELES,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(d);
+}
+
+function formatPacificFull(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE_AMERICA_LOS_ANGELES,
+    dateStyle: "medium",
+    timeStyle: "medium"
+  }).format(d);
 }
 
 function shortTx(tx: string | number): string {

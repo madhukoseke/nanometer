@@ -81,14 +81,7 @@ export function SettlementTab({ events }: { events: NanometerEvent[] }) {
                 }`}
               >
                 <span className="text-muted">{b.latestTs.slice(11, 19)}</span>
-                <a
-                  href={txRefToExplorerHref(b.tx_ref)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-sky-400 hover:underline"
-                >
-                  {shortTx(b.tx_ref)}
-                </a>
+                <TxRefCell txRef={b.tx_ref} />
                 <span className="text-right">{b.batchSize}</span>
                 <span className="text-right">${b.value.toFixed(4)}</span>
               </div>
@@ -107,6 +100,27 @@ function Metric({ label, value, sub }: { label: string; value: string; sub: stri
       <div className="font-mono text-2xl">{value}</div>
       <div className="font-mono text-[11px] text-muted">{sub}</div>
     </div>
+  );
+}
+
+function TxRefCell({ txRef }: { txRef: string }) {
+  const href = txRefToExplorerHref(txRef);
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="truncate text-sky-400 hover:underline"
+      >
+        {shortTx(txRef)}
+      </a>
+    );
+  }
+  return (
+    <span className="truncate text-muted" title={txRef}>
+      {shortTx(txRef)}
+    </span>
   );
 }
 

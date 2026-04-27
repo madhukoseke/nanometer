@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { NanometerEvent } from "@/lib/types";
-import { txRefToExplorerHref } from "@/lib/txRefExplorerUrl";
+import { txRefExplorerTitle, txRefToExplorerHref } from "@/lib/txRefExplorerUrl";
 
 /**
  * Settlement view — groups events by tx_ref (the Circle Gateway settlement
@@ -107,6 +107,7 @@ function Metric({ label, value, sub }: { label: string; value: string; sub: stri
 
 function TxRefCell({ txRef }: { txRef: string }) {
   const href = txRefToExplorerHref(txRef);
+  const title = txRefExplorerTitle(txRef);
   if (href) {
     return (
       <a
@@ -114,13 +115,14 @@ function TxRefCell({ txRef }: { txRef: string }) {
         target="_blank"
         rel="noopener noreferrer"
         className="truncate text-sky-400 hover:underline"
+        title={title}
       >
         {shortTx(txRef)}
       </a>
     );
   }
   return (
-    <span className="truncate text-muted" title={txRef}>
+    <span className="truncate text-muted" title={title}>
       {shortTx(txRef)}
     </span>
   );

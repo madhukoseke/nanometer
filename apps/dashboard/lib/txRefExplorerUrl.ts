@@ -3,10 +3,9 @@
  * - If Circle returns an **absolute https URL**, use it as-is.
  * - Otherwise we normalize a hex value.
  *
- * **Arc testnet (`testnet.arcscan.app`) `/tx/0x…` only accepts a full 32-byte
- * (64-hex) on-chain transaction hash. Gateway often emits a **32-hex (16-byte)**
- * id; pointing `/tx/` at that value yields **422** “mistyped hash”. For those we
- * use the explorer’s **search** page instead of `/tx/`.
+ * **Arc testnet (`testnet.arcscan.app`) `/tx/0x…` expects a full 32-byte (64-hex)
+ * on-chain tx hash. Shorter ids **must not** use `/tx/` (422). This deployment
+ * does **not** expose `/search?q=` (404) — use **`/search-results?q=`** instead.
  *
  * (Legacy `arc-sepolia-explorer.circle.com` is gone — DNS NXDOMAIN.)
  */
@@ -23,7 +22,7 @@ function explorerOrigin(): string {
     } catch {
       // allow plain origin without /tx
       if (/^https?:\/\//i.test(override)) {
-        return override.replace(/\/(tx|search)\/?$/, "");
+        return override.replace(/\/(tx|search-results|search)\/?$/, "");
       }
     }
   }
@@ -82,8 +81,7 @@ export function txRefToExplorerHref(txRef: string | number | unknown): string | 
     return `${origin}/tx/${id}`;
   }
   if (digits === 32) {
-    // Blockscout-style search — avoids 422 on /tx/ for non–tx-length ids
-    return `${origin}/search?q=${encodeURIComponent(id)}`;
+    return `${origin}/search-results?q=${encodeURIComponent(id)}`;
   }
 
   return null;

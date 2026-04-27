@@ -124,9 +124,10 @@ function TxRefCell({ txRef }: { txRef: string }) {
   );
 }
 
-function shortTx(tx: string): string {
-  if (tx.length <= 14) return tx;
-  return `${tx.slice(0, 8)}…${tx.slice(-6)}`;
+function shortTx(tx: string | number): string {
+  const s = String(tx);
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 8)}…${s.slice(-6)}`;
 }
 
 function formatAge(ts: string): string {

@@ -1,37 +1,45 @@
 /**
- * Build an explorer link for `req.payment.transaction` from the seller.
- * - If Circle already returns an absolute https URL, use it as-is.
- * - Otherwise we normalize a hex id and use the Circle Arc Sepolia explorer
- *   (default: public Arc testnet explorer; override via NEXT_PUBLIC_ARC_EXPLORER_TX_BASE).
+ * Build links for `req.payment.transaction` (Circle Gateway settlement field).
+ * - If Circle returns an **absolute https URL**, use it as-is.
+ * - Otherwise we normalize a hex value.
  *
- * (Legacy `https://arc-sepolia-explorer.circle.com` is gone — DNS returns NXDOMAIN.)
+ * **Arc testnet (`testnet.arcscan.app`) `/tx/0x…` only accepts a full 32-byte
+ * (64-hex) on-chain transaction hash. Gateway often emits a **32-hex (16-byte)**
+ * id; pointing `/tx/` at that value yields **422** “mistyped hash”. For those we
+ * use the explorer’s **search** page instead of `/tx/`.
  *
- * Important: **never** strip a whole `0x…` string to hex by removing `x` only —
- * the leading `0` in `0x` is a valid hex character, so you get 65 digit strings
- * and 32/64 length checks (and hyperlinks) fail. Always **slice off `0x` first**,
- * then read hex from the body (or strip non-hex for UUIDs / no-prefix refs).
+ * (Legacy `arc-sepolia-explorer.circle.com` is gone — DNS NXDOMAIN.)
  */
-const DEFAULT_EXPLORER_TX_BASE = "https://testnet.arcscan.app/tx";
+const DEFAULT_EXPLORER_ORIGIN = "https://testnet.arcscan.app";
 
-function explorerBase(): string {
-  return (
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_ARC_EXPLORER_TX_BASE?.replace(/\/+$/, "")) ||
-    DEFAULT_EXPLORER_TX_BASE
-  );
+function explorerOrigin(): string {
+  const override =
+    typeof process !== "undefined" && process.env.NEXT_PUBLIC_ARC_EXPLORER_TX_BASE
+      ? process.env.NEXT_PUBLIC_ARC_EXPLORER_TX_BASE.replace(/\/+$/, "")
+      : "";
+  if (override) {
+    try {
+      return new URL(override).origin;
+    } catch {
+      // allow plain origin without /tx
+      if (/^https?:\/\//i.test(override)) {
+        return override.replace(/\/(tx|search)\/?$/, "");
+      }
+    }
+  }
+  return DEFAULT_EXPLORER_ORIGIN;
 }
 
 /**
- * @returns A normalized `0x…` hash, or `null` if we cannot form one.
+ * @returns A normalized `0x…` lowercase id, or `null`.
  */
 function normalizeTxRefTo0xHash(raw: string): string | null {
   const t = raw.trim();
   if (!t) return null;
 
-  // 1) Strict 0x + body (avoids 65-digit bug from global non-hex strip on "0x" + 64-hex)
   if (/^0x[0-9a-fA-F]{32}$/i.test(t)) return t.toLowerCase();
   if (/^0x[0-9a-fA-F]{64}$/i.test(t)) return t.toLowerCase();
 
-  // 2) 0x + body with possible separators in the body (dashes, spaces) — e.g. UUID-like
   if (/^0x/i.test(t)) {
     const body = t.slice(2).replace(/[^0-9a-fA-F]/g, "");
     if (body.length === 32 || body.length === 64) {
@@ -39,13 +47,20 @@ function normalizeTxRefTo0xHash(raw: string): string | null {
     }
   }
 
-  // 3) No 0x: plain 32 / 64 hex, or 32-hex with dashes (UUID), etc.
   const allHex = t.replace(/[^0-9a-fA-F]/g, "");
   if (allHex.length === 32 || allHex.length === 64) {
     return `0x${allHex.toLowerCase()}`;
   }
 
   return null;
+}
+
+/**
+ * 64 hex digits after 0x = 32 bytes — standard on-chain `tx` hash.
+ * 32 hex digits = 16 bytes — not valid for ArcScan `/tx/`; use `search` instead.
+ */
+function hexDigitCount(normalized0x: string): number {
+  return Math.max(0, normalized0x.length - 2);
 }
 
 /**
@@ -56,7 +71,20 @@ export function txRefToExplorerHref(txRef: string | number | unknown): string | 
   const t = String(txRef).trim();
   if (!t) return null;
   if (/^https?:\/\//i.test(t)) return t;
-  const hash = normalizeTxRefTo0xHash(t);
-  if (!hash) return null;
-  return `${explorerBase()}/${hash}`;
+
+  const id = normalizeTxRefTo0xHash(t);
+  if (!id) return null;
+
+  const origin = explorerOrigin();
+  const digits = hexDigitCount(id);
+
+  if (digits === 64) {
+    return `${origin}/tx/${id}`;
+  }
+  if (digits === 32) {
+    // Blockscout-style search — avoids 422 on /tx/ for non–tx-length ids
+    return `${origin}/search?q=${encodeURIComponent(id)}`;
+  }
+
+  return null;
 }

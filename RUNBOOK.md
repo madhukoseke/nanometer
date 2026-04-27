@@ -141,7 +141,7 @@ After deploy, update `apps/dashboard/.env.local` (and Vercel project envs) so
 4. Hit `https://<swarm>/status` → expect `{"running":false,"agents":5}`.
 5. **Do a full dry run of the swarm** — fire it once, watch the dashboard fill, stop it.
 6. Open the Loom backup video in a browser tab. Verify it plays.
-7. Bookmark `https://arc-sepolia-explorer.circle.com` — judges may ask to see a tx onchain.
+7. Bookmark `https://testnet.arcscan.app` — judges may ask to see a tx onchain.
 
 ## 8. The demo (90 seconds)
 

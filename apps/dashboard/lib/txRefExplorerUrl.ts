@@ -2,14 +2,16 @@
  * Build an explorer link for `req.payment.transaction` from the seller.
  * - If Circle already returns an absolute https URL, use it as-is.
  * - Otherwise we normalize a hex id and use the Circle Arc Sepolia explorer
- *   (default, overridable via NEXT_PUBLIC_ARC_EXPLORER_TX_BASE).
+ *   (default: public Arc testnet explorer; override via NEXT_PUBLIC_ARC_EXPLORER_TX_BASE).
+ *
+ * (Legacy `https://arc-sepolia-explorer.circle.com` is gone — DNS returns NXDOMAIN.)
  *
  * Important: **never** strip a whole `0x…` string to hex by removing `x` only —
  * the leading `0` in `0x` is a valid hex character, so you get 65 digit strings
  * and 32/64 length checks (and hyperlinks) fail. Always **slice off `0x` first**,
  * then read hex from the body (or strip non-hex for UUIDs / no-prefix refs).
  */
-const DEFAULT_EXPLORER_TX_BASE = "https://arc-sepolia-explorer.circle.com/tx";
+const DEFAULT_EXPLORER_TX_BASE = "https://testnet.arcscan.app/tx";
 
 function explorerBase(): string {
   return (

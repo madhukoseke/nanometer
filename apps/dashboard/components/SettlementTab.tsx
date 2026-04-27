@@ -2,9 +2,7 @@
 
 import { useMemo } from "react";
 import type { NanometerEvent } from "@/lib/types";
-
-// Arc testnet block explorer. Update if Arc rebrands the explorer URL.
-const ARC_EXPLORER = "https://arc-sepolia-explorer.circle.com/tx";
+import { txRefToExplorerHref } from "@/lib/txRefExplorerUrl";
 
 /**
  * Settlement view — groups events by tx_ref (the Circle Gateway settlement
@@ -84,9 +82,9 @@ export function SettlementTab({ events }: { events: NanometerEvent[] }) {
               >
                 <span className="text-muted">{b.latestTs.slice(11, 19)}</span>
                 <a
-                  href={`${ARC_EXPLORER}/${b.tx_ref}`}
+                  href={txRefToExplorerHref(b.tx_ref)}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="truncate text-sky-400 hover:underline"
                 >
                   {shortTx(b.tx_ref)}

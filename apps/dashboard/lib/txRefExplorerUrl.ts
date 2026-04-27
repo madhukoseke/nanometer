@@ -6,9 +6,9 @@
  * 2. Circle may return a **full explorer URL** → use as-is.
  * 3. Otherwise the value is usually hex:
  *    - **64 hex digits** (32-byte EVM tx hash) → `testnet.arcscan.app/tx/0x…` works when indexed.
- *    - **32 hex digits** (16-byte id) → Circle **Gateway batch / settlement reference**. It is **not**
- *      guaranteed to appear on ArcScan as a transaction or search hit (“0 matching results”).
- *      We **do not** send users to explorer links for these — avoids dead-end searches.
+ *    - **32 hex digits** (16-byte id) → Circle **Gateway settlement reference**. ArcScan
+ *      often shows **0 search hits** — still useful to open the explorer search page from the UI.
+ *      We link **`/search-results?q=`** (not `/search?q=` — that path 404s on this host).
  *
  * ArcScan `/tx/` rejects bad lengths (422). Legacy Circle host `arc-sepolia-explorer.circle.com` is NXDOMAIN.
  */
@@ -58,7 +58,7 @@ function hexDigitCount(normalized0x: string): number {
 }
 
 /**
- * Tooltip for the Settlement row: explains why there may be no explorer link.
+ * Tooltip for the Settlement row (ArcScan may still show 0 results for 32-hex Gateway ids).
  */
 export function txRefExplorerTitle(txRef: string | number | unknown): string {
   const raw = String(txRef ?? "").trim();
@@ -73,13 +73,13 @@ export function txRefExplorerTitle(txRef: string | number | unknown): string {
     return `${id} — Arc testnet tx (opens on ArcScan when indexed)`;
   }
   if (digits === 32) {
-    return `${id} — Circle Gateway settlement reference (16-byte id). Not the same as a public Arc transaction hash; ArcScan search typically shows no results.`;
+    return `${id} — Circle Gateway settlement reference. ArcScan search may show no matches; on-chain batch txs use a full 64-hex hash when Circle exposes it.`;
   }
   return raw;
 }
 
 /**
- * Href for a new tab, or `null` when no reliable explorer destination exists.
+ * Href for a new tab, or `null` if the ref cannot be normalized to a known hex/url shape.
  */
 export function txRefToExplorerHref(txRef: string | number | unknown): string | null {
   if (txRef == null) return null;
@@ -92,11 +92,12 @@ export function txRefToExplorerHref(txRef: string | number | unknown): string | 
 
   const digits = hexDigitCount(id);
 
-  // Only 64-hex is a standard on-chain tx hash path on ArcScan.
   if (digits === 64) {
     return `${explorerOrigin()}/tx/${id}`;
   }
+  if (digits === 32) {
+    return `${explorerOrigin()}/search-results?q=${encodeURIComponent(id)}`;
+  }
 
-  // 32-hex: Gateway-internal style id — do not link (search returns 0 / misleads users).
   return null;
 }
